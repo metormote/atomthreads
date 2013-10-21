@@ -183,8 +183,10 @@ static ATOM_TCB *curr_tcb = NULL;
 static ATOM_TCB idle_tcb;
 
 /* Number of nested interrupts */
-static int atomIntCnt = 0;
+static volatile int atomIntCnt = 0;
 
+/* Idle thread hook callback */
+static void (*atomIdleCallback)(void);
 
 /* Constants */
 
@@ -606,17 +608,20 @@ void atomIntEnter (void)
  * been made ready and should be scheduled in.
  *
  * @param timer_tick TRUE if this is a timer tick
+ * @param block_sched TRUE if we do not want scheduler to be called
  *
  * @return None
  */
-void atomIntExit (uint8_t timer_tick)
+void atomIntExit (uint8_t timer_tick, uint8_t run_sched)
 {
-    /* Decrement the interrupt count */
-    atomIntCnt--;
-
-    /* Call the scheduler */
-    atomSched (timer_tick);
+  /* Decrement the interrupt count */
+  atomIntCnt--;
+  
+  /* Call the scheduler */
+  if(run_sched==TRUE && atomIntCnt==0) atomSched (timer_tick);
 }
+
+
 
 
 /**
@@ -671,7 +676,7 @@ ATOM_TCB *atomCurrentContext (void)
  * @retval ATOM_OK Success
  * @retval ATOM_ERROR Initialisation error
  */
-uint8_t atomOSInit (void *idle_thread_stack_bottom, uint32_t idle_thread_stack_size, uint8_t idle_thread_stack_check)
+uint8_t atomOSInit (void *idle_thread_stack_bottom, uint32_t idle_thread_stack_size, uint8_t idle_thread_stack_check, void (*idle_callback)(void))
 {
     uint8_t status;
 
@@ -679,6 +684,10 @@ uint8_t atomOSInit (void *idle_thread_stack_bottom, uint32_t idle_thread_stack_s
     curr_tcb = NULL;
     tcbReadyQ = NULL;
     atomOSStarted = FALSE;
+  
+    //callback for idle thread
+    atomIdleCallback=idle_callback;
+    
 
     /* Create the idle thread */
     status = atomThreadCreate(&idle_tcb,
@@ -761,13 +770,11 @@ void atomOSStart (void)
  */
 static void atomIdleThread (uint32_t param)
 {
-    /* Compiler warning  */
-    param = param;
-
     /* Loop forever */
     while (1)
     {
-        /** \todo Provide user idle hooks*/
+        /** Provide user idle hooks*/
+        if(atomIdleCallback) atomIdleCallback();
     }
 }
 

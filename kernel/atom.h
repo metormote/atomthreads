@@ -104,13 +104,13 @@ extern uint8_t atomOSStarted;
 
 
 /* Function prototypes */
-extern uint8_t atomOSInit (void *idle_thread_stack_bottom, uint32_t idle_thread_stack_size, uint8_t idle_thread_stack_check);
+extern uint8_t atomOSInit (void *idle_thread_stack_bottom, uint32_t idle_thread_stack_size, uint8_t idle_thread_stack_check, void (*idle_callback)(void));
 extern void atomOSStart (void);
 
 extern void atomSched (uint8_t timer_tick);
 
 extern void atomIntEnter (void);
-extern void atomIntExit (uint8_t timer_tick);
+extern void atomIntExit (uint8_t timer_tick, uint8_t run_sched);
 
 extern uint8_t tcbEnqueuePriority (ATOM_TCB **tcb_queue_ptr, ATOM_TCB *tcb_ptr);
 extern ATOM_TCB *tcbDequeueHead (ATOM_TCB **tcb_queue_ptr);
